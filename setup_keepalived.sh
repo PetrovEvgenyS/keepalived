@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Переменные
-KEEPALIVED_CONF="/etc/keepalived/keepalived.conf"
-VIRTUAL_IP="10.100.10.10"
-INTERFACE="eth0"
-PASSWORD="mE@3#6*V"
-NODE_TYPE=$1  # Первый аргумент скрипта: MASTER или BACKUP
+KEEPALIVED_CONF="/etc/keepalived/keepalived.conf"   # Путь к конфигурационному файлу Keepalived
+VIRTUAL_IP="10.100.10.10/24"                        # Виртуальный IP-адрес
+INTERFACE="eth0"                                    # Сетевой интерфейс для VRRP
+PASSWORD="mE@3#6*V"                                 # Пароль для аутентификации VRRP
+NODE_TYPE=$1                                        # Первый аргумент скрипта: MASTER или BACKUP
 
 ### Определение цветовых кодов ###
 ESC=$(printf '\033') RESET="${ESC}[0m" MAGENTA="${ESC}[35m" RED="${ESC}[31m" GREEN="${ESC}[32m"
@@ -42,8 +42,10 @@ setup_keepalived() {
         exit 1
     fi
 
+    magentaprint "Установка Keepalived"
     dnf -y install keepalived
     
+    magentaprint "Настройка конфигурационного файл Keepalived $KEEPALIVED_CONF"
     cat <<EOF > $KEEPALIVED_CONF
 global_defs {
   router_id $ROUTER_ID
@@ -52,7 +54,7 @@ global_defs {
 }
 
 vrrp_script check_haproxy {
-  script \"/usr/bin/systemctl is-active --quiet haproxy\"
+  script "/usr/bin/systemctl is-active --quiet haproxy"
   interval 2
   weight -2
 }
@@ -80,9 +82,9 @@ EOF
     useradd -s /usr/bin/nologin keepalived_script
 
     magentaprint "Проверка статуса Keepalived:"
-    systemctl restart Keepalived                # Перезапуск службы для применения изменений
-    systemctl enable --now Keepalived
-    systemctl status Keepalived --no-pager
+    systemctl restart keepalived                # Перезапуск службы для применения изменений
+    systemctl enable --now keepalived
+    systemctl status keepalived --no-pager
 
     magentaprint "Версия Keepalived:"
     keepalived --version
