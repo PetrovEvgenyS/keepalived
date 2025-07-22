@@ -10,6 +10,14 @@ INTERFACE="enp0s8"
 PASSWORD="mE@3#6*V"
 NODE_TYPE=$1  # Первый аргумент скрипта: MASTER или BACKUP
 
+### Определение цветовых кодов ###
+ESC=$(printf '\033') RESET="${ESC}[0m" MAGENTA="${ESC}[35m" RED="${ESC}[31m" GREEN="${ESC}[32m"
+
+### Цветные функции ##
+magentaprint() { echo; printf "${MAGENTA}%s${RESET}\n" "$1"; }
+errorprint() { echo; printf "${RED}%s${RESET}\n" "$1"; }
+greenprint() { echo; printf "${GREEN}%s${RESET}\n" "$1"; }
+
 
 # ----------------------------------------------------------------------------------------------- #
 
@@ -32,7 +40,7 @@ setup_keepalived() {
         STATE="BACKUP"
         ROUTER_ID=LB-02
     else
-        echo "Некорректный тип узла. Используйте 'MASTER' или 'BACKUP'."
+        errorprint "Некорректный тип узла. Используйте 'MASTER' или 'BACKUP'."
         exit 1
     fi
 
@@ -70,14 +78,14 @@ vrrp_instance VI_1 {
 }
 EOF
 
-    echo "Создание пользователя keepalived_script"
+    magentaprint "Создание пользователя keepalived_script"
     useradd -s /usr/bin/nologin keepalived_script
 
     systemctl restart keepalived
     systemctl enable keepalived
     systemctl status keepalived
 
-    echo "Установка Keepalived на узле $NODE_TYPE завершена и настроена!"
+    greenprint "Установка Keepalived на узле $NODE_TYPE завершена и настроена!"
 }
 
 
