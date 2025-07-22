@@ -1,12 +1,9 @@
 #!/bin/bash
 
-# Если сервис Keepalived остановленны на обоих узлах, возможно нужно выпелить NetworkManager
-# systemctl status NetworkManager
-
 # Переменные
 KEEPALIVED_CONF="/etc/keepalived/keepalived.conf"
 VIRTUAL_IP="10.100.10.10"
-INTERFACE="enp0s8"
+INTERFACE="eth0"
 PASSWORD="mE@3#6*V"
 NODE_TYPE=$1  # Первый аргумент скрипта: MASTER или BACKUP
 
@@ -40,11 +37,12 @@ setup_keepalived() {
         STATE="BACKUP"
         ROUTER_ID=LB-02
     else
-        errorprint "Некорректный тип узла. Используйте 'MASTER' или 'BACKUP'."
+        errorprint "Некорректный тип узла. Используйте аргумент 'MASTER' или 'BACKUP'."
+        magentaprint "Пример: $0 MASTER"
         exit 1
     fi
 
-    apt -y install keepalived
+    dnf -y install keepalived
     
     cat <<EOF > $KEEPALIVED_CONF
 global_defs {
@@ -81,16 +79,21 @@ EOF
     magentaprint "Создание пользователя keepalived_script"
     useradd -s /usr/bin/nologin keepalived_script
 
-    systemctl restart keepalived
-    systemctl enable keepalived
-    systemctl status keepalived
+    magentaprint "Проверка статуса Keepalived:"
+    systemctl restart Keepalived                # Перезапуск службы для применения изменений
+    systemctl enable --now Keepalived
+    systemctl status Keepalived --no-pager
+
+    magentaprint "Версия Keepalived:"
+    keepalived --version
 
     greenprint "Установка Keepalived на узле $NODE_TYPE завершена и настроена!"
 }
 
 
-# Основной вызов функций
 main() {
     setup_keepalived
 }
 
+# Вызов основной функции
+main
