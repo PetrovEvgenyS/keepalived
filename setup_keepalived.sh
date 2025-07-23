@@ -6,6 +6,7 @@ VIRTUAL_IP="10.100.10.10/24"                        # Виртуальный IP-
 INTERFACE="eth0"                                    # Сетевой интерфейс для VRRP
 PASSWORD="mE@3#6*V"                                 # Пароль для аутентификации VRRP
 NODE_TYPE=$1                                        # Первый аргумент скрипта: MASTER или BACKUP
+OS=$(awk -F= '/^ID=/{gsub(/"/, "", $2); print $2}' /etc/os-release) # Переменная определения и хранения дистрибутива
 
 ### Определение цветовых кодов ###
 ESC=$(printf '\033') RESET="${ESC}[0m" MAGENTA="${ESC}[35m" RED="${ESC}[31m" GREEN="${ESC}[32m"
@@ -25,26 +26,45 @@ if [ -z "$SUDO_USER" ]; then
     exit 1
 fi
 
+# Проверка заданных аргументов
+if [ "$NODE_TYPE" == "MASTER" ]; then
+    PRIORITY=100
+    STATE="MASTER"
+    ROUTER_ID=LB-01
+elif [ "$NODE_TYPE" == "BACKUP" ]; then
+    PRIORITY=99
+    STATE="BACKUP"
+    ROUTER_ID=LB-02
+else
+    errorprint "Некорректный тип узла. Используйте аргумент 'MASTER' или 'BACKUP'."
+    magentaprint "Пример: $0 MASTER"
+    exit 1
+fi
+
+ubuntu() {
+    magentaprint "Установка keepalived ..."
+    apt -y install keepalived 
+}
+
+almalinux() {
+    magentaprint "Установка keepalived ..."
+    dnf -y install keepalived    
+}
+
+# Выбор ОС для установки keepalived:
+check_os() {
+  if [ "$OS" == "ubuntu" ]; then
+      ubuntu
+  elif [ "$OS" == "almalinux" ]; then
+      almalinux
+  else
+      errorprint "Скрипт не поддерживает установленную ОС: $OS"
+      exit 1
+  fi
+}
 
 # Функция для установки и настройки Keepalived
-setup_keepalived() {
-    if [ "$NODE_TYPE" == "MASTER" ]; then
-        PRIORITY=100
-        STATE="MASTER"
-        ROUTER_ID=LB-01
-    elif [ "$NODE_TYPE" == "BACKUP" ]; then
-        PRIORITY=99
-        STATE="BACKUP"
-        ROUTER_ID=LB-02
-    else
-        errorprint "Некорректный тип узла. Используйте аргумент 'MASTER' или 'BACKUP'."
-        magentaprint "Пример: $0 MASTER"
-        exit 1
-    fi
-
-    magentaprint "Установка Keepalived"
-    dnf -y install keepalived
-    
+setup_keepalived() {  
     magentaprint "Настройка конфигурационного файл Keepalived $KEEPALIVED_CONF"
     cat <<EOF > $KEEPALIVED_CONF
 global_defs {
@@ -94,6 +114,7 @@ EOF
 
 
 main() {
+    check_os
     setup_keepalived
 }
 
