@@ -70,7 +70,7 @@ setup_keepalived() {
 global_defs {
   router_id $ROUTER_ID
   enable_script_security
-  script_user root
+  script_user keepalived_script
 }
 
 vrrp_script check_haproxy {
